@@ -1,0 +1,36 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}Proveedores{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li><li class="breadcrumb-item active">Proveedores</li></ol></nav>
+    <h1>Proveedores</h1>
+    <p class="subtitle">Catálogo de proveedores y su gasto acumulado.</p>
+  </div>
+  <a href="{% url 'proveedor_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo proveedor</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+  {% if proveedores %}
+  <div class="table-wrap">
+  <table class="table table-modern table-striped table-hover">
+    <thead><tr><th>Nombre</th><th>RFC</th><th>Email</th><th>Teléfono</th><th class="num"># Gastos</th><th class="num">Total gastado</th><th></th></tr></thead>
+    <tbody>
+    {% for p in proveedores %}
+      <tr class="clickable" data-href="{% url 'gasto_list' %}?proveedor={{ p.pk }}">
+        <td class="fw-semibold"><a href="{% url 'gasto_list' %}?proveedor={{ p.pk }}">{{ p.nombre }}</a></td>
+        <td class="text-muted">{{ p.rfc|default:"—" }}</td><td class="text-muted">{{ p.email|default:"—" }}</td><td class="text-muted">{{ p.telefono|default:"—" }}</td>
+        <td class="num">{{ p.n }}</td><td class="num fw-semibold">{{ p.total|dinero }}</td>
+        <td class="text-end"><a href="{% url 'proveedor_edit' p.pk %}" class="btn btn-sm btn-light-subtle" title="Editar" aria-label="Editar {{ p.nombre }}"><i class="bi bi-pencil"></i></a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    {% include "finanzas/_vacio.html" with icono="people" titulo="Aún no hay proveedores" texto="Registra un proveedor para poder capturar gastos." url_name="proveedor_create" cta="Nuevo proveedor" %}
+  {% endif %}
+</div>
+{% endblock %}

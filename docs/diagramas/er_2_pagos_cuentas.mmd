@@ -1,0 +1,50 @@
+erDiagram
+    GASTO ||--o{ PAGO : "se liquida con"
+    CUENTA_BANCARIA ||--o{ PAGO : "fondea"
+    CUENTA_BANCARIA ||--o{ MOVIMIENTO_CUENTA : "registra"
+    PAGO |o--o| MOVIMIENTO_CUENTA : "genera 1 cargo"
+    GASTO {
+        int id PK
+        varchar folio UK
+        decimal monto
+        varchar estado
+    }
+    PAGO {
+        int id PK
+        varchar folio UK "P-00001"
+        int gasto_id FK
+        int cuenta_id FK
+        decimal monto "CHECK > 0"
+        varchar metodo "TRANSFERENCIA CHEQUE TARJETA"
+        varchar referencia
+        varchar estado "PENDIENTE APROBADO EFECTUADO CANCELADO"
+        uuid idempotency_key UK "evita duplicados"
+        datetime fecha_pago
+        int creado_por_id FK
+        int aprobado_por_id FK
+        int efectuado_por_id FK
+        datetime creado
+        datetime actualizado
+    }
+    CUENTA_BANCARIA {
+        int id PK
+        varchar banco
+        varchar nombre
+        varchar numero UK "cuenta o CLABE"
+        varchar moneda "MXN USD"
+        decimal saldo_inicial
+        decimal saldo "CHECK >= 0"
+        bool activa
+        datetime creado
+    }
+    MOVIMIENTO_CUENTA {
+        int id PK
+        int cuenta_id FK
+        int pago_id FK,UK "nullable"
+        varchar tipo "CARGO ABONO"
+        decimal monto
+        decimal saldo_resultante
+        varchar descripcion
+        datetime fecha
+        int usuario_id FK
+    }

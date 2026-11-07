@@ -1,0 +1,111 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}Tablero{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item active">Inicio</li></ol></nav>
+    <h1>Tablero</h1>
+    <p class="subtitle">Resumen de gastos, pagos y saldos bancarios.</p>
+  </div>
+  <a href="{% url 'gasto_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo gasto</a>
+</div>
+{% endblock %}
+{% block content %}
+{% with r=resumen %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-xl-3"><div class="card kpi">
+    <div class="label"><span class="icon bg-primary-subtle text-primary-emphasis"><i class="bi bi-receipt"></i></span>Gastos vigentes</div>
+    <div class="value">{{ r.total_gastos|dinero }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card kpi">
+    <div class="label"><span class="icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-hourglass-split"></i></span>Por pagar</div>
+    <div class="value">{{ r.por_pagar|dinero }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card kpi">
+    <div class="label"><span class="icon bg-success-subtle text-success-emphasis"><i class="bi bi-check2-circle"></i></span>Pagado este mes</div>
+    <div class="value">{{ r.pagado_mes|dinero }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card kpi">
+    <div class="label"><span class="icon bg-info-subtle text-info-emphasis"><i class="bi bi-bank"></i></span>Saldo en cuentas</div>
+    <div class="value">{{ r.saldo_cuentas|dinero }}</div></div></div>
+</div>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'gasto_list' %}?estado=PENDIENTE" class="chip"><i class="bi bi-clipboard-check"></i>Gastos por aprobar <span class="count">{{ r.gastos_pendientes_aprobacion }}</span></a>
+  <a href="{% url 'pago_list' %}?estado=PENDIENTE" class="chip"><i class="bi bi-hand-thumbs-up"></i>Pagos por aprobar <span class="count">{{ r.pagos_por_aprobar }}</span></a>
+  <a href="{% url 'pago_list' %}?estado=APROBADO" class="chip"><i class="bi bi-send"></i>Pagos por efectuar <span class="count">{{ r.pagos_por_efectuar }}</span></a>
+</div>
+{% endwith %}
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-8"><div class="card p-3 h-100">
+    <div class="card-title-sm">Gastos registrados vs pagos efectuados · últimos 6 meses</div>
+    <div class="chart-box"><canvas id="chMes" aria-label="Gráfico de gastos y pagos por mes" role="img"></canvas></div></div></div>
+  <div class="col-xl-4"><div class="card p-3 h-100">
+    <div class="card-title-sm">Gastos por categoría</div>
+    <div class="chart-box"><canvas id="chCat" aria-label="Gráfico de gastos por categoría" role="img"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="card p-3 h-100">
+    <div class="card-title-sm">Saldo por cuenta bancaria</div>
+    <div class="chart-box sm"><canvas id="chCuentas" aria-label="Saldo por cuenta" role="img"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="card p-3 h-100">
+    <div class="card-title-sm">Gastos por estado</div>
+    <div class="chart-box sm"><canvas id="chEstado" aria-label="Gastos por estado" role="img"></canvas></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card h-100">
+    <div class="p-3 pb-2 d-flex justify-content-between align-items-center"><div class="card-title-sm mb-0">Por aprobar</div><a href="{% url 'gasto_list' %}?estado=PENDIENTE" class="small">Ver todos</a></div>
+    <div class="list-group list-group-flush">
+      {% for g in pendientes %}
+        <a href="{% url 'gasto_detail' g.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 bg-transparent">
+          <span class="text-truncate"><span class="folio">{{ g.folio }}</span> <span class="text-muted">· {{ g.proveedor }}</span></span><span class="num fw-semibold">{{ g.monto|dinero }}</span></a>
+      {% empty %}{% include "finanzas/_vacio.html" with icono="check2-all" titulo="Todo aprobado" texto="No hay gastos esperando aprobación." %}{% endfor %}
+    </div></div></div>
+  <div class="col-lg-4"><div class="card h-100">
+    <div class="p-3 pb-2 d-flex justify-content-between align-items-center"><div class="card-title-sm mb-0">Listos para efectuar</div><a href="{% url 'pago_list' %}?estado=APROBADO" class="small">Ver todos</a></div>
+    <div class="list-group list-group-flush">
+      {% for p in pagos_aprobados %}
+        <a href="{% url 'pago_detail' p.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 bg-transparent">
+          <span class="text-truncate"><span class="folio">{{ p.folio }}</span> <span class="text-muted">· {{ p.gasto.folio }}</span></span><span class="num fw-semibold">{{ p.monto|dinero }}</span></a>
+      {% empty %}{% include "finanzas/_vacio.html" with icono="send-check" titulo="Nada por efectuar" texto="Los pagos aprobados aparecerán aquí." %}{% endfor %}
+    </div></div></div>
+  <div class="col-lg-4"><div class="card h-100">
+    <div class="p-3 pb-2 d-flex justify-content-between align-items-center"><div class="card-title-sm mb-0">Últimos movimientos</div><a href="{% url 'cuenta_list' %}" class="small">Cuentas</a></div>
+    <div class="list-group list-group-flush">
+      {% for m in ultimos_movimientos %}
+        <div class="list-group-item d-flex justify-content-between align-items-center gap-2 bg-transparent">
+          <span class="d-flex align-items-center gap-2 text-truncate">
+            <i class="bi {% if m.tipo == 'CARGO' %}bi-arrow-up-right text-danger{% else %}bi-arrow-down-left text-success{% endif %}"></i>
+            <span class="text-truncate">{{ m.cuenta.nombre }}<br><small class="text-muted">{{ m.fecha|date:"d M Y" }}</small></span></span>
+          <span class="num fw-semibold {% if m.tipo == 'CARGO' %}text-danger{% else %}text-success{% endif %}">{% if m.tipo == 'CARGO' %}−{% else %}+{% endif %}{{ m.monto|dinero }}</span></div>
+      {% empty %}{% include "finanzas/_vacio.html" with icono="arrow-left-right" titulo="Sin movimientos" texto="Los cargos y abonos aparecerán aquí." %}{% endfor %}
+    </div></div></div>
+</div>
+{{ resumen|json_script:"resumen" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const R = JSON.parse(document.getElementById('resumen').textContent);
+const tip = {callbacks: {label: c => ` ${c.dataset.label || c.label}: ${fmt(c.raw)}`}};
+CHARTS.push(new Chart(chMes, {type: 'bar', data: {
+  labels: R.gastos_vs_pagos_por_mes.map(x => new Date(x.mes + '-02').toLocaleDateString('es-MX', {month: 'short', year: '2-digit'})),
+  datasets: [
+    {label: 'Gastos', data: R.gastos_vs_pagos_por_mes.map(x => x.gastos), backgroundColor: '#6366f1', borderRadius: 6, maxBarThickness: 28},
+    {label: 'Pagos', data: R.gastos_vs_pagos_por_mes.map(x => x.pagos), backgroundColor: '#a5b4fc', borderRadius: 6, maxBarThickness: 28}]},
+  options: {scales: {y: {ticks: {callback: v => fmtCorto(v)}, border: {display: false}}, x: {grid: {display: false}}},
+            plugins: {legend: {position: 'top', align: 'end'}, tooltip: tip}}}));
+CHARTS.push(new Chart(chCat, {type: 'doughnut', data: {
+  labels: R.gastos_por_categoria.map(x => x.categoria),
+  datasets: [{data: R.gastos_por_categoria.map(x => x.monto), backgroundColor: PALETA, borderWidth: 0, hoverOffset: 6}]},
+  options: {cutout: '68%', plugins: {legend: {position: 'bottom'}, tooltip: {callbacks: {label: c => ` ${c.label}: ${fmt(c.raw)}`}}}}}));
+CHARTS.push(new Chart(chCuentas, {type: 'bar', data: {
+  labels: R.saldo_por_cuenta.map(x => x.cuenta),
+  datasets: [{label: 'Saldo', data: R.saldo_por_cuenta.map(x => x.saldo), backgroundColor: '#6366f1', borderRadius: 6, maxBarThickness: 26}]},
+  options: {indexAxis: 'y', scales: {x: {ticks: {callback: v => fmtCorto(v)}, border: {display: false}}, y: {grid: {display: false}}},
+            plugins: {legend: {display: false}, tooltip: tip}}}));
+const estados = Object.keys(COLOR_ESTADO);
+CHARTS.push(new Chart(chEstado, {type: 'bar', data: {
+  labels: R.gastos_por_estado.map(x => x.etiqueta),
+  datasets: [{label: 'Gastos', data: R.gastos_por_estado.map(x => x.cantidad), backgroundColor: estados.map(e => COLOR_ESTADO[e]), borderRadius: 6, maxBarThickness: 42}]},
+  options: {plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => ` ${c.raw} gasto(s)`}}},
+            scales: {y: {ticks: {precision: 0}, border: {display: false}}, x: {grid: {display: false}}}}}));
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "finanzas/base.html" %}
+{% block title %}Iniciar sesión{% endblock %}
+{% block public %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <div class="d-flex align-items-center gap-2 mb-4">
+      <span class="d-inline-grid rounded-3 text-white" style="width:40px;height:40px;place-items:center;background:var(--app-accent)"><i class="bi bi-wallet2 fs-5"></i></span>
+      <div><div class="fw-bold fs-5 lh-1">Control Financiero</div><div class="text-muted small">Gastos y pagos de la empresa</div></div>
+    </div>
+    <h1 class="h5 fw-bold mb-1">Inicia sesión</h1>
+    <p class="text-muted small mb-4">Ingresa con tu usuario y contraseña.</p>
+    {% if form.errors %}<div class="alert alert-danger py-2 small"><i class="bi bi-x-octagon me-1"></i>Usuario o contraseña incorrectos.</div>{% endif %}
+    <form method="post" class="una-vez">{% csrf_token %}
+      <div class="mb-3"><label class="form-label" for="u">Usuario</label>
+        <input id="u" name="username" class="form-control" autocomplete="username" autofocus required></div>
+      <div class="mb-4"><label class="form-label" for="p">Contraseña</label>
+        <input id="p" type="password" name="password" class="form-control" autocomplete="current-password" required></div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-primary w-100 py-2">Entrar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

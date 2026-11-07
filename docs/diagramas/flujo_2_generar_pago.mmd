@@ -1,0 +1,19 @@
+flowchart TD
+    CA((A)) --> G[Usuario pulsa «Generar pago»<br/>en el gasto · se propone el<br/>monto pendiente]
+    G --> M[Elige cuenta de origen<br/>y ajusta el monto<br/>· pago total o parcial ·]
+    M --> V1{¿Gasto APROBADO o<br/>PAGADO PARCIAL?}
+    V1 -- No --> E1[Rechazo: el gasto debe<br/>estar aprobado antes de pagar]
+    V1 -- Sí --> V2{¿Llave de idempotencia<br/>ya usada?}
+    V2 -- Sí --> E2[Se devuelve el pago<br/>existente · no se duplica]
+    V2 -- No --> V3{¿Monto ≤ pendiente<br/>sin programar?}
+    V3 -- No --> E3[Rechazo: excede el gasto<br/>o ya hay pagos que lo cubren]
+    E3 --> M
+    V3 -- Sí --> N[Se crea el pago ligado<br/>al gasto + bitácora]
+    N --> PP[/Pago PENDIENTE/]
+    PP --> CB((B))
+    classDef err fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef estado fill:#e0e7ff,stroke:#6366f1,color:#1e1b4b
+    classDef conector fill:#4f46e5,stroke:#4f46e5,color:#fff
+    class E1,E2,E3 err
+    class PP estado
+    class CA,CB conector

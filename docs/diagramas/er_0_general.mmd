@@ -1,0 +1,11 @@
+erDiagram
+    USUARIO ||--o{ GASTO : "registra / aprueba"
+    USUARIO ||--o{ PAGO : "genera / aprueba / efectúa"
+    USUARIO ||--o{ BITACORA_ESTADO : "realiza cambio"
+    PROVEEDOR ||--o{ GASTO : "factura"
+    GASTO ||--o{ PAGO : "se liquida con"
+    CUENTA_BANCARIA ||--o{ PAGO : "fondea"
+    CUENTA_BANCARIA ||--o{ MOVIMIENTO_CUENTA : "registra"
+    PAGO |o--o| MOVIMIENTO_CUENTA : "genera 1 cargo"
+    GASTO ||--o{ BITACORA_ESTADO : "historial"
+    PAGO ||--o{ BITACORA_ESTADO : "historial"

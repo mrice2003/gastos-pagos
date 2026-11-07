@@ -1,0 +1,62 @@
+flowchart TD
+    subgraph P1["Parte 1 · Registro y aprobación del gasto"]
+        P1_I([Inicio]) --> P1_R[Usuario registra el gasto<br/>proveedor · concepto · categoría · monto]
+        P1_R --> P1_P[/Gasto PENDIENTE/]
+        P1_P --> P1_D1{¿Aprobador decide?}
+        P1_D1 -- Cancelar --> P1_C1[Gasto CANCELADO]
+        P1_D1 -- Aprobar --> P1_A[/Gasto APROBADO/]
+        P1_A --> P1_D2{¿Se cancela antes<br/>de pagar?}
+        P1_D2 -- Sí --> P1_C2[Gasto CANCELADO<br/>+ se cancelan sus pagos<br/>pendientes / aprobados]
+        P1_D2 -- No --> CA((A))
+        P1_C1 --> P1_F([Fin · estado terminal:<br/>un gasto cancelado<br/>no se reactiva])
+        P1_C2 --> P1_F
+    end
+    subgraph P2["Parte 2 · Generar pago desde el gasto"]
+        CA((A)) --> P2_G[Usuario pulsa «Generar pago»<br/>en el gasto · se propone el<br/>monto pendiente]
+        P2_G --> P2_M[Elige cuenta de origen<br/>y ajusta el monto<br/>· pago total o parcial ·]
+        P2_M --> P2_V1{¿Gasto APROBADO o<br/>PAGADO PARCIAL?}
+        P2_V1 -- No --> P2_E1[Rechazo: el gasto debe<br/>estar aprobado antes de pagar]
+        P2_V1 -- Sí --> P2_V2{¿Llave de idempotencia<br/>ya usada?}
+        P2_V2 -- Sí --> P2_E2[Se devuelve el pago<br/>existente · no se duplica]
+        P2_V2 -- No --> P2_V3{¿Monto ≤ pendiente<br/>sin programar?}
+        P2_V3 -- No --> P2_E3[Rechazo: excede el gasto<br/>o ya hay pagos que lo cubren]
+        P2_E3 --> P2_M
+        P2_V3 -- Sí --> P2_N[Se crea el pago ligado<br/>al gasto + bitácora]
+        P2_N --> P2_PP[/Pago PENDIENTE/]
+        P2_PP --> CB((B))
+    end
+    subgraph P3["Parte 3 · Aprobar y efectuar el pago"]
+        CB((B)) --> P3_D1{¿Aprobador decide<br/>sobre el pago?}
+        P3_D1 -- Cancelar --> P3_X[Pago CANCELADO<br/>· no se reactiva ·<br/>el monto vuelve a estar disponible]
+        P3_X --> CA((A))
+        P3_D1 -- Aprobar --> P3_PA[/Pago APROBADO/]
+        P3_PA --> P3_D2{¿Efectuar o<br/>cancelar?}
+        P3_D2 -- Cancelar --> P3_X
+        P3_D2 -- Efectuar --> P3_V1{¿Gasto sigue aprobado<br/>y el pago no se ha<br/>efectuado antes?}
+        P3_V1 -- No --> P3_E1[Rechazo: gasto no aprobado<br/>o pago duplicado]
+        P3_V1 -- Sí --> P3_V2{¿Monto ≤ saldo de<br/>la cuenta bancaria?}
+        P3_V2 -- No --> P3_E2[Rechazo: saldo insuficiente<br/>· registrar abono o cancelar ·]
+        P3_E2 --> P3_D2
+        P3_V2 -- Sí --> P3_T[Transacción atómica:<br/>1 · descuenta el saldo de la cuenta<br/>2 · registra movimiento CARGO<br/>3 · pago EFECTUADO + fecha<br/>4 · bitácora]
+        P3_T --> P3_V3{¿Total pagado =<br/>monto del gasto?}
+        P3_V3 -- No --> P3_GP[/Gasto PAGADO PARCIAL/]
+        P3_GP --> CA((A))
+        P3_V3 -- Sí --> P3_GT[/Gasto PAGADO/]
+        P3_GT --> P3_F([Fin])
+    end
+    classDef term fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef estado fill:#e0e7ff,stroke:#6366f1,color:#1e1b4b
+    classDef conector fill:#4f46e5,stroke:#4f46e5,color:#fff
+    classDef err fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef ok fill:#dcfce7,stroke:#22c55e,color:#14532d
+    class P1_C1,P1_C2 term
+    class P1_P,P1_A estado
+    class CA conector
+    class P2_E1,P2_E2,P2_E3 err
+    class P2_PP estado
+    class CA,CB conector
+    class P3_E1,P3_E2 err
+    class P3_X term
+    class P3_T,P3_GT ok
+    class P3_PA,P3_GP estado
+    class CB,CA,CA conector

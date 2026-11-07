@@ -1,0 +1,74 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}{{ cuenta.nombre }}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'cuenta_list' %}">Cuentas bancarias</a></li>
+      <li class="breadcrumb-item active">{{ cuenta.nombre }}</li></ol></nav>
+    <h1>{{ cuenta.nombre }} {% if not cuenta.activa %}<span class="status status-secondary">Inactiva</span>{% endif %}</h1>
+    <p class="subtitle">{{ cuenta.banco }} · {{ cuenta.numero }} · {{ cuenta.moneda }}</p>
+  </div>
+  <a href="{% url 'cuenta_edit' cuenta.pk %}" class="btn btn-light-subtle"><i class="bi bi-pencil me-1"></i>Editar</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card amounts mb-3" style="grid-template-columns: repeat(3, minmax(0,1fr))">
+      <div><div class="k">Saldo actual</div><div class="v">{{ cuenta.saldo|dinero }}</div></div>
+      <div><div class="k">Total abonos</div><div class="v text-success">{{ stats.ABONO|dinero }}</div></div>
+      <div><div class="k">Total cargos (pagos)</div><div class="v text-danger">{{ stats.CARGO|dinero }}</div></div>
+    </div>
+    <div class="card p-3"><div class="card-title-sm">Evolución del saldo</div>
+      <div class="chart-box sm"><canvas id="chSaldo" aria-label="Evolución del saldo" role="img"></canvas></div></div>
+  </div>
+  <div class="col-lg-4"><div class="card p-4 h-100">
+    <div class="card-title-sm">Registrar abono</div>
+    <p class="small text-muted">Ingresa un depósito para aumentar el saldo disponible para pagos.</p>
+    <form method="post" action="{% url 'cuenta_abonar' cuenta.pk %}" class="una-vez">{% csrf_token %}
+      <label class="form-label" for="{{ abono_form.monto.id_for_label }}">Monto</label>
+      <div class="input-group mb-3"><span class="input-group-text">$</span>{{ abono_form.monto }}</div>
+      <label class="form-label" for="{{ abono_form.descripcion.id_for_label }}">Descripción</label>
+      {{ abono_form.descripcion }}
+      <button type="submit" class="btn btn-success w-100 mt-3"><i class="bi bi-plus-circle me-1"></i>Registrar abono</button>
+    </form>
+  </div></div>
+</div>
+<div class="card">
+  <div class="p-3 pb-0"><div class="card-title-sm">Movimientos</div></div>
+  {% if page.object_list %}
+  <div class="table-wrap">
+  <table class="table table-modern table-striped">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Pago</th><th class="num">Monto</th><th class="num">Saldo resultante</th></tr></thead>
+    <tbody>
+    {% for m in page %}
+      <tr><td class="text-muted text-nowrap">{{ m.fecha|date:"d M Y H:i" }}</td><td>{% badge m.tipo m.get_tipo_display %}</td><td>{{ m.descripcion }}</td>
+        <td>{% if m.pago %}<a href="{% url 'pago_detail' m.pago_id %}" class="folio">{{ m.pago.folio }}</a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+        <td class="num fw-semibold {% if m.tipo == 'CARGO' %}text-danger{% else %}text-success{% endif %}">{% if m.tipo == 'CARGO' %}−{% else %}+{% endif %}{{ m.monto|dinero }}</td>
+        <td class="num">{{ m.saldo_resultante|dinero }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    {% include "finanzas/_vacio.html" with icono="arrow-left-right" titulo="Sin movimientos" texto="Los abonos y los pagos efectuados desde esta cuenta aparecerán aquí." %}
+  {% endif %}
+</div>
+{% include "finanzas/_paginacion.html" %}
+{{ historial|json_script:"historial" }}
+{% endblock %}
+{% block scripts %}
+<script>
+const H = JSON.parse(document.getElementById('historial').textContent);
+const ctx = chSaldo.getContext('2d');
+const grad = ctx.createLinearGradient(0, 0, 0, 240);
+grad.addColorStop(0, 'rgba(99,102,241,.28)'); grad.addColorStop(1, 'rgba(99,102,241,0)');
+CHARTS.push(new Chart(chSaldo, {type: 'line', data: {labels: H.map(x => x.fecha.slice(0, 10)),
+  datasets: [{label: 'Saldo', data: H.map(x => x.saldo), borderColor: '#6366f1', backgroundColor: grad, fill: true, tension: .3, pointRadius: 2, borderWidth: 2}]},
+  options: {plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => ' ' + fmt(c.raw)}}},
+            scales: {y: {ticks: {callback: v => fmtCorto(v)}, border: {display: false}}, x: {grid: {display: false}, ticks: {maxTicksLimit: 8}}}}}));
+</script>
+{% endblock %}

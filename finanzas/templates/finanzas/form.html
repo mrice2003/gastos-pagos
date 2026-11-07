@@ -1,0 +1,40 @@
+{% extends "finanzas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+      <li class="breadcrumb-item"><a href="{% url volver %}">Volver al listado</a></li>
+      <li class="breadcrumb-item active">{{ titulo }}</li>
+    </ol></nav>
+    <h1>{{ titulo }}</h1>
+  </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card p-4" style="max-width: 760px">
+  <form method="post" class="una-vez" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="row g-3">
+    {% for field in form %}
+      {% if field.is_hidden %}{{ field }}{% else %}
+      <div class="{% if field.name == 'notas' or field.name == 'concepto' %}col-12{% else %}col-md-6{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <div class="form-check form-switch mt-md-4">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+        {% else %}
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>{{ field }}
+        {% endif %}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        {% for e in field.errors %}<div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>{% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+    </div>
+    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+      <a href="{% url volver %}" class="btn btn-light-subtle">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

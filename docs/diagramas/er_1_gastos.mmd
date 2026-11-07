@@ -1,0 +1,44 @@
+erDiagram
+    PROVEEDOR ||--o{ GASTO : "factura"
+    USUARIO ||--o{ GASTO : "registra / aprueba"
+    GASTO ||--o{ BITACORA_ESTADO : "historial"
+    USUARIO ||--o{ BITACORA_ESTADO : "realiza cambio"
+    USUARIO {
+        int id PK
+        varchar username UK
+        varchar password "hash"
+    }
+    PROVEEDOR {
+        int id PK
+        varchar nombre UK
+        varchar rfc
+        varchar email
+        varchar telefono
+        datetime creado
+    }
+    GASTO {
+        int id PK
+        varchar folio UK "G-00001"
+        int proveedor_id FK
+        varchar concepto
+        varchar categoria
+        decimal monto "CHECK > 0"
+        date fecha
+        date fecha_vencimiento
+        text notas
+        varchar estado "PENDIENTE APROBADO PAGADO_PARCIAL PAGADO CANCELADO"
+        int creado_por_id FK
+        int aprobado_por_id FK
+        datetime creado
+        datetime actualizado
+    }
+    BITACORA_ESTADO {
+        int id PK
+        int gasto_id FK "nullable"
+        int pago_id FK "nullable"
+        varchar estado_anterior
+        varchar estado_nuevo
+        varchar comentario
+        int usuario_id FK
+        datetime fecha
+    }

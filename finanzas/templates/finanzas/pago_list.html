@@ -1,0 +1,61 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}Pagos{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li><li class="breadcrumb-item active">Pagos</li></ol></nav>
+    <h1>Pagos</h1>
+    <p class="subtitle">Los pagos se generan desde un gasto aprobado con el botón <b>Generar pago</b>.</p>
+  </div>
+  <a href="{% url 'gasto_list' %}?estado=APROBADO" class="btn btn-primary"><i class="bi bi-lightning-charge me-1"></i>Gastos listos para pagar</a>
+</div>
+{% endblock %}
+{% block content %}
+<form class="card filters mb-3" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3"><label class="form-label small mb-1">Estado</label><select name="estado" class="form-select form-select-sm"><option value="">Todos</option>
+      {% for v, l in estados %}<option value="{{ v }}" {% if f.estado == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3"><label class="form-label small mb-1">Cuenta</label><select name="cuenta" class="form-select form-select-sm"><option value="">Todas</option>
+      {% for c in cuentas %}<option value="{{ c.pk }}" {% if f.cuenta == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-2 d-flex gap-1"><button class="btn btn-sm btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      <a href="{% url 'pago_list' %}" class="btn btn-sm btn-light-subtle" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a></div>
+  </div>
+</form>
+<div class="card">
+  {% if page.object_list %}
+  <div class="table-wrap">
+  <table class="table table-modern table-striped table-hover">
+    <thead><tr><th>Folio</th><th>Gasto</th><th>Proveedor</th><th>Cuenta</th><th>Método</th>
+      <th class="num">Monto</th><th>Estado</th><th>Fecha de pago</th><th class="text-end">Acciones</th></tr></thead>
+    <tbody>
+    {% for p in page %}
+      <tr class="clickable" data-href="{% url 'pago_detail' p.pk %}">
+        <td><a href="{% url 'pago_detail' p.pk %}" class="folio">{{ p.folio }}</a></td>
+        <td><a href="{% url 'gasto_detail' p.gasto_id %}">{{ p.gasto.folio }}</a></td>
+        <td>{{ p.gasto.proveedor }}</td><td>{{ p.cuenta.nombre }}</td><td class="text-muted">{{ p.get_metodo_display }}</td>
+        <td class="num fw-semibold">{{ p.monto|dinero }}</td><td>{% badge p.estado p.get_estado_display %}</td>
+        <td class="text-muted text-nowrap">{{ p.fecha_pago|date:"d M Y"|default:"—" }}</td>
+        <td class="text-end text-nowrap">
+          {% if p.puede_aprobar %}<form method="post" action="{% url 'pago_aprobar' p.pk %}" class="d-inline una-vez">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-primary" title="Aprobar" aria-label="Aprobar {{ p.folio }}"><i class="bi bi-check2"></i></button></form>{% endif %}
+          {% if p.puede_efectuar %}<form method="post" action="{% url 'pago_efectuar' p.pk %}" class="d-inline una-vez">{% csrf_token %}<button type="submit" class="btn btn-sm btn-success" title="Efectuar pago" aria-label="Efectuar {{ p.folio }}"><i class="bi bi-send"></i></button></form>{% endif %}
+          {% if p.puede_cancelar %}<form method="post" action="{% url 'pago_cancelar' p.pk %}" class="d-inline una-vez" onsubmit="return confirm('¿Cancelar el pago {{ p.folio }}? No se puede revertir.')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar" aria-label="Cancelar {{ p.folio }}"><i class="bi bi-x-lg"></i></button></form>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="5">Total filtrado</th><th class="num">{{ total|dinero }}</th><th colspan="3"></th></tr></tfoot>
+  </table>
+  </div>
+  {% else %}
+    <div class="empty">
+      <div class="icon"><i class="bi bi-cash-coin"></i></div>
+      <h6>Aún no hay pagos{% if f.estado or f.cuenta %} con esos filtros{% endif %}</h6>
+      <p>Genera uno desde un gasto aprobado.</p>
+      <a href="{% url 'gasto_list' %}?estado=APROBADO" class="btn btn-primary btn-sm"><i class="bi bi-lightning-charge me-1"></i>Ver gastos aprobados</a>
+    </div>
+  {% endif %}
+</div>
+{% include "finanzas/_paginacion.html" %}
+{% endblock %}

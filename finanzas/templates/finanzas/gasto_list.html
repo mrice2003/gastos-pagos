@@ -1,0 +1,60 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}Gastos{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li><li class="breadcrumb-item active">Gastos</li></ol></nav>
+    <h1>Gastos</h1>
+    <p class="subtitle">Registra, aprueba y da seguimiento a los gastos de la empresa.</p>
+  </div>
+  <a href="{% url 'gasto_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo gasto</a>
+</div>
+{% endblock %}
+{% block content %}
+<form class="card filters mb-3" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label small mb-1">Buscar</label>
+      <div class="input-group input-group-sm"><span class="input-group-text bg-transparent"><i class="bi bi-search"></i></span>
+      <input name="q" value="{{ f.q }}" class="form-control" placeholder="Folio o concepto"></div></div>
+    <div class="col-6 col-md-2"><label class="form-label small mb-1">Estado</label><select name="estado" class="form-select form-select-sm"><option value="">Todos</option>
+      {% for v, l in estados %}<option value="{{ v }}" {% if f.estado == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label small mb-1">Categoría</label><select name="categoria" class="form-select form-select-sm"><option value="">Todas</option>
+      {% for v, l in categorias %}<option value="{{ v }}" {% if f.categoria == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label small mb-1">Proveedor</label><select name="proveedor" class="form-select form-select-sm"><option value="">Todos</option>
+      {% for p in proveedores %}<option value="{{ p.pk }}" {% if f.proveedor == p.pk|stringformat:'s' %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-1"><label class="form-label small mb-1">Desde</label><input type="date" name="desde" value="{{ f.desde }}" class="form-control form-control-sm"></div>
+    <div class="col-6 col-md-1"><label class="form-label small mb-1">Hasta</label><input type="date" name="hasta" value="{{ f.hasta }}" class="form-control form-control-sm"></div>
+    <div class="col-md-1 d-flex gap-1"><button class="btn btn-sm btn-primary flex-fill" title="Filtrar"><i class="bi bi-funnel"></i></button>
+      <a href="{% url 'gasto_list' %}" class="btn btn-sm btn-light-subtle" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a></div>
+  </div>
+</form>
+<div class="card">
+  {% if page.object_list %}
+  <div class="table-wrap">
+  <table class="table table-modern table-striped table-hover">
+    <thead><tr><th>Folio</th><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Categoría</th>
+      <th class="num">Monto</th><th style="min-width:130px">Pagado</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for g in page %}
+      <tr class="clickable" data-href="{% url 'gasto_detail' g.pk %}">
+        <td><a href="{% url 'gasto_detail' g.pk %}" class="folio">{{ g.folio }}</a></td>
+        <td class="text-muted text-nowrap">{{ g.fecha|date:"d M Y" }}</td><td>{{ g.proveedor }}</td><td>{{ g.concepto }}</td>
+        <td class="text-muted">{{ g.get_categoria_display }}</td>
+        <td class="num fw-semibold">{{ g.monto|dinero }}</td>
+        <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:6px"><div class="progress-bar bg-success" style="width:{{ g.porcentaje_pagado }}%"></div></div>
+          <small class="text-muted" style="width:34px">{{ g.porcentaje_pagado }}%</small></div></td>
+        <td>{% badge g.estado g.get_estado_display %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="5">Total filtrado</th><th class="num">{{ total|dinero }}</th><th colspan="2"></th></tr></tfoot>
+  </table>
+  </div>
+  {% else %}
+    {% include "finanzas/_vacio.html" with icono="receipt" titulo="No hay gastos con esos filtros" texto="Prueba con otros filtros o registra un gasto nuevo." url_name="gasto_create" cta="Registrar gasto" %}
+  {% endif %}
+</div>
+{% include "finanzas/_paginacion.html" %}
+{% endblock %}

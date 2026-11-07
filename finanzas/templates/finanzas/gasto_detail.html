@@ -1,0 +1,126 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}{{ gasto.folio }}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'gasto_list' %}">Gastos</a></li>
+      <li class="breadcrumb-item active">{{ gasto.folio }}</li></ol></nav>
+    <h1>{{ gasto.concepto }} {% badge gasto.estado gasto.get_estado_display %}</h1>
+    <p class="subtitle">{{ gasto.folio }} · {{ gasto.proveedor }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if gasto.estado == 'PENDIENTE' %}<a href="{% url 'gasto_edit' gasto.pk %}" class="btn btn-light-subtle"><i class="bi bi-pencil me-1"></i>Editar</a>{% endif %}
+    {% if gasto.puede_cancelar %}
+      <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#mCancelar"><i class="bi bi-x-circle me-1"></i>Cancelar</button>
+    {% endif %}
+    {% if gasto.puede_aprobar %}
+      <form method="post" action="{% url 'gasto_aprobar' gasto.pk %}" class="una-vez">{% csrf_token %}
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Aprobar gasto</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block content %}
+{% stepper "gasto" gasto.estado %}
+
+{% if gasto.estado == 'CANCELADO' %}
+  <div class="alert alert-secondary d-flex gap-2 align-items-center"><i class="bi bi-lock"></i>Gasto cancelado. Los gastos cancelados no se pueden reactivar.</div>
+{% elif gasto.estado == 'PENDIENTE' %}
+  <div class="alert alert-warning d-flex gap-2 align-items-center"><i class="bi bi-info-circle"></i>Este gasto debe aprobarse antes de poder generar un pago.</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7 d-flex flex-column gap-3">
+    <div class="card amounts">
+      <div><div class="k">Monto</div><div class="v">{{ gasto.monto|dinero }}</div></div>
+      <div><div class="k">Pagado</div><div class="v text-success">{{ gasto.monto_pagado|dinero }}</div></div>
+      <div><div class="k">Saldo pendiente</div><div class="v {% if gasto.saldo_pendiente > 0 and gasto.estado != 'CANCELADO' %}text-danger{% endif %}">{{ gasto.saldo_pendiente|dinero }}</div></div>
+      <div><div class="k">Sin programar</div><div class="v">{{ gasto.disponible_para_pago|dinero }}</div></div>
+    </div>
+    <div class="card p-4">
+      <div class="card-title-sm">Detalle</div>
+      <div class="dl-grid">
+        <div><div class="k">Proveedor</div><div class="v">{{ gasto.proveedor }}</div></div>
+        <div><div class="k">Categoría</div><div class="v">{{ gasto.get_categoria_display }}</div></div>
+        <div><div class="k">Fecha</div><div class="v">{{ gasto.fecha|date:"d M Y" }}</div></div>
+        <div><div class="k">Vencimiento</div><div class="v">{{ gasto.fecha_vencimiento|date:"d M Y"|default:"—" }}</div></div>
+        <div><div class="k">Registrado por</div><div class="v">{{ gasto.creado_por }}</div></div>
+        <div><div class="k">Aprobado por</div><div class="v">{{ gasto.aprobado_por|default:"—" }}</div></div>
+        {% if gasto.notas %}<div style="grid-column:1/-1"><div class="k">Notas</div><div class="v">{{ gasto.notas|linebreaksbr }}</div></div>{% endif %}
+      </div>
+      <div class="mt-4"><div class="d-flex justify-content-between small mb-1"><span class="text-muted">Avance de pago</span><span class="fw-semibold">{{ gasto.porcentaje_pagado }}%</span></div>
+        <div class="progress" style="height:8px"><div class="progress-bar bg-success" style="width:{{ gasto.porcentaje_pagado }}%"></div></div></div>
+    </div>
+    <div class="card">
+      <div class="p-3 pb-0"><div class="card-title-sm">Pagos ligados a este gasto</div></div>
+      {% if pagos %}
+      <div class="table-wrap"><table class="table table-modern table-hover">
+        <thead><tr><th>Folio</th><th>Cuenta</th><th class="num">Monto</th><th>Estado</th><th>Fecha de pago</th></tr></thead>
+        <tbody>
+        {% for p in pagos %}
+          <tr class="clickable" data-href="{% url 'pago_detail' p.pk %}"><td><a href="{% url 'pago_detail' p.pk %}" class="folio">{{ p.folio }}</a></td><td>{{ p.cuenta.nombre }}</td>
+            <td class="num fw-semibold">{{ p.monto|dinero }}</td><td>{% badge p.estado p.get_estado_display %}</td>
+            <td class="text-muted">{{ p.fecha_pago|date:"d M Y H:i"|default:"—" }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}
+        {% if gasto.puede_generar_pago %}
+          {% include "finanzas/_vacio.html" with icono="cash-stack" titulo="Aún no hay pagos" texto="Usa el panel «Generar pago» para crear el primero." %}
+        {% else %}
+          {% include "finanzas/_vacio.html" with icono="cash-stack" titulo="Aún no hay pagos" texto="Los pagos se generan cuando el gasto está aprobado." %}
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5 d-flex flex-column gap-3">
+    {% if pago_form %}
+    <div class="card pay-panel">
+      <div class="head"><i class="bi bi-lightning-charge-fill me-1"></i>Generar pago</div>
+      <div class="p-3">
+        <p class="small text-muted mb-3">Crea un pago ligado a este gasto por el monto pendiente. Reduce el monto para registrar un <b>pago parcial</b>.</p>
+        <form method="post" action="{% url 'gasto_generar_pago' gasto.pk %}" class="una-vez">{% csrf_token %}
+          {{ pago_form.idempotency_key }}
+          <div class="mb-3"><label class="form-label" for="{{ pago_form.cuenta.id_for_label }}">Cuenta de origen</label>{{ pago_form.cuenta }}</div>
+          <div class="mb-3"><label class="form-label" for="{{ pago_form.monto.id_for_label }}">Monto</label>
+            <div class="input-group"><span class="input-group-text">$</span>{{ pago_form.monto }}<span class="input-group-text">MXN</span></div>
+            <div class="form-text">{{ pago_form.monto.help_text }}</div></div>
+          <div class="row g-2 mb-3">
+            <div class="col"><label class="form-label" for="{{ pago_form.metodo.id_for_label }}">Método</label>{{ pago_form.metodo }}</div>
+            <div class="col"><label class="form-label" for="{{ pago_form.referencia.id_for_label }}">Referencia</label>{{ pago_form.referencia }}</div>
+          </div>
+          <button type="submit" class="btn btn-success w-100"><i class="bi bi-cash-stack me-1"></i>Generar pago</button>
+        </form>
+      </div>
+    </div>
+    {% elif gasto.estado == 'APROBADO' or gasto.estado == 'PAGADO_PARCIAL' %}
+    <div class="alert alert-info small mb-0"><i class="bi bi-info-circle me-1"></i>El total del gasto ya está cubierto por pagos programados. Aprueba y efectúa los pagos pendientes, o cancela alguno para generar otro.</div>
+    {% endif %}
+    <div class="card p-4">
+      <div class="card-title-sm">Bitácora</div>
+      <div class="timeline">
+        {% for b in bitacora %}
+          <div class="item"><div class="fw-semibold">{{ b.comentario|default:b.estado_nuevo }}</div>
+            <div class="small">{% if b.estado_anterior %}{{ b.estado_anterior }} → {% endif %}{{ b.estado_nuevo }}</div>
+            <div class="when">{{ b.usuario }} · {{ b.fecha|date:"d M Y H:i" }}</div></div>
+        {% empty %}<div class="text-muted small">Sin registros.</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="mCancelar" tabindex="-1" aria-labelledby="mCancelarT"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{% url 'gasto_cancelar' gasto.pk %}" class="una-vez">{% csrf_token %}
+    <div class="modal-header border-0"><h5 class="modal-title" id="mCancelarT">Cancelar {{ gasto.folio }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body pt-0">
+      <div class="alert alert-danger small d-flex gap-2"><i class="bi bi-exclamation-triangle"></i><span>Esta acción es definitiva: un gasto cancelado <b>no se puede reactivar</b>. Los pagos pendientes o aprobados ligados también se cancelarán.</span></div>
+      <label class="form-label" for="{{ motivo_form.motivo.id_for_label }}">Motivo</label>{{ motivo_form.motivo }}
+    </div>
+    <div class="modal-footer border-0"><button type="button" class="btn btn-light-subtle" data-bs-dismiss="modal">Volver</button><button type="submit" class="btn btn-danger">Cancelar gasto</button></div>
+  </form>
+</div></div></div>
+{% endblock %}

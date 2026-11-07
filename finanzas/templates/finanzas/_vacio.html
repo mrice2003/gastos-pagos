@@ -1,0 +1,6 @@
+<div class="empty">
+  <div class="icon"><i class="bi bi-{{ icono|default:'inbox' }}"></i></div>
+  <h6>{{ titulo }}</h6>
+  {% if texto %}<p>{{ texto }}</p>{% endif %}
+  {% if url_name %}<a href="{% url url_name %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>{{ cta }}</a>{% endif %}
+</div>

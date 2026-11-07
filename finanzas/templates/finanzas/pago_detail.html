@@ -1,0 +1,81 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}{{ pago.folio }}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'pago_list' %}">Pagos</a></li>
+      <li class="breadcrumb-item active">{{ pago.folio }}</li></ol></nav>
+    <h1>Pago {{ pago.folio }} {% badge pago.estado pago.get_estado_display %}</h1>
+    <p class="subtitle">Para <a href="{% url 'gasto_detail' pago.gasto_id %}">{{ pago.gasto.folio }} · {{ pago.gasto.concepto }}</a></p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if pago.puede_cancelar %}
+      <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#mCancelar"><i class="bi bi-x-circle me-1"></i>Cancelar</button>
+    {% endif %}
+    {% if pago.puede_aprobar %}
+      <form method="post" action="{% url 'pago_aprobar' pago.pk %}" class="una-vez">{% csrf_token %}
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Aprobar pago</button></form>
+    {% endif %}
+    {% if pago.puede_efectuar %}
+      <form method="post" action="{% url 'pago_efectuar' pago.pk %}" class="una-vez">{% csrf_token %}
+        <button type="submit" class="btn btn-success"><i class="bi bi-send me-1"></i>Efectuar pago</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block content %}
+{% stepper "pago" pago.estado %}
+
+{% if pago.puede_efectuar and not saldo_suficiente %}
+  <div class="alert alert-danger d-flex gap-2"><i class="bi bi-exclamation-triangle"></i><span>La cuenta <b>{{ pago.cuenta.nombre }}</b> tiene saldo {{ pago.cuenta.saldo|dinero }}, insuficiente para este pago. <a href="{% url 'cuenta_detail' pago.cuenta_id %}">Registra un abono</a> o cancela el pago.</span></div>
+{% elif pago.estado == 'PENDIENTE' %}
+  <div class="alert alert-warning d-flex gap-2 align-items-center"><i class="bi bi-info-circle"></i>El pago debe aprobarse antes de efectuarse.</div>
+{% elif pago.estado == 'CANCELADO' %}
+  <div class="alert alert-secondary d-flex gap-2 align-items-center"><i class="bi bi-lock"></i>Pago cancelado; no puede reactivarse.</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7 d-flex flex-column gap-3">
+    <div class="card amounts" style="grid-template-columns: repeat(3, minmax(0,1fr))">
+      <div><div class="k">Monto del pago</div><div class="v">{{ pago.monto|dinero }}</div></div>
+      <div><div class="k">Pendiente del gasto</div><div class="v">{{ pago.gasto.saldo_pendiente|dinero }}</div></div>
+      <div><div class="k">Saldo de la cuenta</div><div class="v {% if not saldo_suficiente and pago.puede_efectuar %}text-danger{% endif %}">{{ pago.cuenta.saldo|dinero }}</div></div>
+    </div>
+    <div class="card p-4">
+      <div class="card-title-sm">Detalle</div>
+      <div class="dl-grid">
+        <div><div class="k">Proveedor</div><div class="v">{{ pago.gasto.proveedor }}</div></div>
+        <div><div class="k">Total del gasto</div><div class="v">{{ pago.gasto.monto|dinero }}</div></div>
+        <div><div class="k">Cuenta de origen</div><div class="v"><a href="{% url 'cuenta_detail' pago.cuenta_id %}">{{ pago.cuenta }}</a></div></div>
+        <div><div class="k">Método / referencia</div><div class="v">{{ pago.get_metodo_display }}{% if pago.referencia %} · {{ pago.referencia }}{% endif %}</div></div>
+        <div><div class="k">Fecha de pago</div><div class="v">{{ pago.fecha_pago|date:"d M Y H:i"|default:"—" }}</div></div>
+        <div><div class="k">Generado por</div><div class="v">{{ pago.creado_por }}</div></div>
+        <div><div class="k">Aprobado por</div><div class="v">{{ pago.aprobado_por|default:"—" }}</div></div>
+        <div><div class="k">Efectuado por</div><div class="v">{{ pago.efectuado_por|default:"—" }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5"><div class="card p-4 h-100">
+    <div class="card-title-sm">Bitácora</div>
+    <div class="timeline">
+      {% for b in bitacora %}
+        <div class="item"><div class="fw-semibold">{{ b.comentario|default:b.estado_nuevo }}</div>
+          <div class="small">{% if b.estado_anterior %}{{ b.estado_anterior }} → {% endif %}{{ b.estado_nuevo }}</div>
+          <div class="when">{{ b.usuario }} · {{ b.fecha|date:"d M Y H:i" }}</div></div>
+      {% endfor %}
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="mCancelar" tabindex="-1" aria-labelledby="mCancelarT"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{% url 'pago_cancelar' pago.pk %}" class="una-vez">{% csrf_token %}
+    <div class="modal-header border-0"><h5 class="modal-title" id="mCancelarT">Cancelar {{ pago.folio }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body pt-0"><div class="alert alert-danger small d-flex gap-2"><i class="bi bi-exclamation-triangle"></i><span>Un pago cancelado no se puede reactivar. El monto vuelve a quedar disponible en el gasto para generar otro pago.</span></div>
+      <label class="form-label" for="{{ motivo_form.motivo.id_for_label }}">Motivo</label>{{ motivo_form.motivo }}</div>
+    <div class="modal-footer border-0"><button type="button" class="btn btn-light-subtle" data-bs-dismiss="modal">Volver</button><button type="submit" class="btn btn-danger">Cancelar pago</button></div>
+  </form>
+</div></div></div>
+{% endblock %}

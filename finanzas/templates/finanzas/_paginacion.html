@@ -1,0 +1,11 @@
+{% load finanzas_tags %}
+{% if page.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3 small text-muted" aria-label="Paginación">
+  <span>{{ page.start_index }}–{{ page.end_index }} de {{ page.paginator.count }}</span>
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item {% if not page.has_previous %}disabled{% endif %}"><a class="page-link" href="{% if page.has_previous %}?{% qs_page page.previous_page_number %}{% else %}#{% endif %}" aria-label="Anterior"><i class="bi bi-chevron-left"></i></a></li>
+    <li class="page-item disabled"><span class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+    <li class="page-item {% if not page.has_next %}disabled{% endif %}"><a class="page-link" href="{% if page.has_next %}?{% qs_page page.next_page_number %}{% else %}#{% endif %}" aria-label="Siguiente"><i class="bi bi-chevron-right"></i></a></li>
+  </ul>
+</nav>
+{% endif %}

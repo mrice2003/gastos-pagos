@@ -1,0 +1,33 @@
+{% extends "finanzas/base.html" %}
+{% load finanzas_tags %}
+{% block title %}Cuentas bancarias{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li><li class="breadcrumb-item active">Cuentas bancarias</li></ol></nav>
+    <h1>Cuentas bancarias</h1>
+    <p class="subtitle">Saldo total en cuentas activas: <b class="text-body">{{ total|dinero }}</b></p>
+  </div>
+  <a href="{% url 'cuenta_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nueva cuenta</a>
+</div>
+{% endblock %}
+{% block content %}
+{% if cuentas %}
+<div class="row g-3">
+  {% for c in cuentas %}
+  <div class="col-md-6 col-xl-4"><a href="{% url 'cuenta_detail' c.pk %}" class="text-reset">
+    <div class="card account-card {% if not c.activa %}opacity-50{% endif %}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="bank">{{ c.banco }}</div><div class="fw-semibold fs-6">{{ c.nombre }}</div></div>
+        {% if c.activa %}<span class="status status-success">Activa</span>{% else %}<span class="status status-secondary">Inactiva</span>{% endif %}
+      </div>
+      <div class="balance mt-3">{{ c.saldo|dinero }}</div>
+      <div class="d-flex justify-content-between small text-muted mt-1"><span>•••• {{ c.numero|slice:"-4:" }}</span><span>{{ c.moneda }}</span></div>
+    </div></a></div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">{% include "finanzas/_vacio.html" with icono="bank" titulo="Aún no hay cuentas" texto="Registra una cuenta bancaria para poder efectuar pagos." url_name="cuenta_create" cta="Nueva cuenta" %}</div>
+{% endif %}
+{% endblock %}
