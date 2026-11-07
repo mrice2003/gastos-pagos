@@ -44,6 +44,17 @@ def crear_gasto(usuario, **datos):
         return gasto
 
 
+def editar_gasto(gasto_id, **datos):
+    with transaction.atomic():
+        gasto = _lock_gasto(gasto_id)
+        if gasto.estado != GE.PENDIENTE:
+            raise ReglaNegocioError("Sólo se pueden editar gastos pendientes.")
+        for campo, valor in datos.items():
+            setattr(gasto, campo, valor)
+        gasto.save(update_fields=[*datos, "actualizado"])
+        return gasto
+
+
 def aprobar_gasto(gasto_id, usuario):
     with transaction.atomic():
         gasto = _lock_gasto(gasto_id)
@@ -159,6 +170,7 @@ def cancelar_pago(pago_id, usuario, motivo=""):
 def efectuar_pago(pago_id, usuario):
     """Ejecuta el pago: descuenta el saldo de la cuenta y actualiza el estado del gasto."""
     with transaction.atomic():
+        gasto = _lock_gasto(Pago.objects.values_list("gasto_id", flat=True).get(pk=pago_id))
         pago = _lock_pago(pago_id)
         if pago.estado == PE.EFECTUADO:
             raise ReglaNegocioError("Este pago ya fue efectuado (se evitó un pago duplicado).")
@@ -166,7 +178,6 @@ def efectuar_pago(pago_id, usuario):
             raise ReglaNegocioError("Un pago cancelado no se puede efectuar.")
         if pago.estado != PE.APROBADO:
             raise ReglaNegocioError("El pago debe estar aprobado antes de efectuarse.")
-        gasto = _lock_gasto(pago.gasto_id)
         if gasto.estado not in (GE.APROBADO, GE.PAGADO_PARCIAL):
             raise ReglaNegocioError("El gasto debe estar aprobado para poder pagarse.")
         if pago.monto > gasto.saldo_pendiente:

@@ -74,6 +74,22 @@ class ReglasGastoTest(BaseTest):
             services.cancelar_gasto(g.pk, self.user)
 
 
+    def test_editar_gasto_cancelado_no_lo_reactiva(self):
+        self.client.login(username="tester", password="clave-segura-123")
+        g = self.gasto("100.00", aprobar=False)
+        url = reverse("gasto_edit", args=[g.pk])
+        datos = {"proveedor": self.prov.pk, "concepto": "Editado", "categoria": "OPERACION",
+                 "monto": "120.00", "fecha": timezone.localdate().isoformat()}
+        self.client.post(url, datos)
+        g.refresh_from_db()
+        self.assertEqual((g.concepto, g.monto, g.estado), ("Editado", D("120.00"), Gasto.Estado.PENDIENTE))
+        services.cancelar_gasto(g.pk, self.user)
+        with self.assertRaises(ReglaNegocioError):
+            services.editar_gasto(g.pk, concepto="Otra vez")
+        g.refresh_from_db()
+        self.assertEqual((g.concepto, g.estado), ("Editado", Gasto.Estado.CANCELADO))
+
+
 class ReglasPagoTest(BaseTest):
     def test_pago_no_puede_exceder_saldo_de_cuenta(self):
         g = self.gasto("1500.00")

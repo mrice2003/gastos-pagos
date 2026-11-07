@@ -155,8 +155,11 @@ def gasto_edit(request, pk):
         return redirect("gasto_detail", pk=pk)
     form = GastoForm(request.POST or None, instance=gasto)
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Gasto actualizado.")
+        try:
+            services.editar_gasto(pk, **form.cleaned_data)
+            messages.success(request, "Gasto actualizado.")
+        except ReglaNegocioError as e:
+            messages.error(request, str(e))
         return redirect("gasto_detail", pk=pk)
     return render(request, "finanzas/form.html", {"form": form, "titulo": f"Editar {gasto.folio}",
                                                    "volver": "gasto_list"})
