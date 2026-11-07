@@ -40,7 +40,7 @@ class GastoForm(BootstrapMixin, forms.ModelForm):
 class CuentaForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = CuentaBancaria
-        fields = ["banco", "nombre", "numero", "moneda", "saldo_inicial", "activa"]
+        fields = ["banco", "nombre", "numero", "saldo_inicial", "activa"]
 
 
 class CuentaEditForm(BootstrapMixin, forms.ModelForm):

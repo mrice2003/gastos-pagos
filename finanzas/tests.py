@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -110,6 +111,25 @@ class ReglasPagoTest(BaseTest):
         self.assertEqual(p1.pk, p2.pk)
         self.assertEqual(g.pagos.count(), 1)
 
+    def test_doble_envio_concurrente_por_el_total_devuelve_el_pago_existente(self):
+        g = self.gasto("500.00")
+        key = uuid.uuid4()
+        lock_real = services._lock_gasto
+        primero = {}
+
+        def otro_envio_gana_la_carrera(gasto_id):
+            if not primero:
+                primero["pago"] = None
+                primero["pago"], _ = services.generar_pago(gasto_id, self.user, cuenta=self.cuenta,
+                                                           idempotency_key=key)
+            return lock_real(gasto_id)
+
+        with mock.patch.object(services, "_lock_gasto", side_effect=otro_envio_gana_la_carrera):
+            pago, creado = services.generar_pago(g.pk, self.user, cuenta=self.cuenta, idempotency_key=key)
+        self.assertFalse(creado)
+        self.assertEqual(pago.pk, primero["pago"].pk)
+        self.assertEqual(g.pagos.count(), 1)
+
     def test_no_se_programa_mas_del_total(self):
         g = self.gasto("500.00")
         services.generar_pago(g.pk, self.user, cuenta=self.cuenta)
@@ -186,3 +206,27 @@ class VistasYApiTest(BaseTest):
                     "/api/movimientos/", "/api/proveedores/", "/api/resumen/", "/api/gastos/?estado=APROBADO"]:
             self.assertEqual(api.get(url).status_code, 200, url)
         self.assertEqual(api.post("/api/gastos/", {}).status_code, 405)
+
+    def test_filtros_invalidos_se_ignoran_en_html_y_dan_400_en_api(self):
+        self.client.login(username="tester", password="clave-segura-123")
+        self.gasto()
+        for url in ["?proveedor=abc", "?desde=hoy", "?hasta=2024-99-99"]:
+            r = self.client.get(reverse("gasto_list") + url)
+            self.assertEqual(r.status_code, 200, url)
+            self.assertEqual(len(r.context["page"].object_list), 1, url)
+        self.assertEqual(self.client.get(reverse("pago_list") + "?cuenta=x").status_code, 200)
+        api = APIClient()
+        api.force_authenticate(self.user)
+        for url in ["/api/gastos/?proveedor=x", "/api/gastos/?desde=hoy", "/api/gastos/?hasta=2024-99-99",
+                    "/api/pagos/?gasto=x", "/api/pagos/?cuenta=x"]:
+            self.assertEqual(api.get(url).status_code, 400, url)
+        r = api.get(f"/api/gastos/?proveedor={self.prov.pk}&desde=2000-01-01")
+        self.assertEqual(r.json()["count"], 1)
+
+    def test_proveedores_excluyen_gastos_cancelados(self):
+        self.client.login(username="tester", password="clave-segura-123")
+        self.gasto("300.00")
+        services.cancelar_gasto(self.gasto("5000.00", aprobar=False).pk, self.user)
+        prov = self.client.get(reverse("proveedor_list")).context["proveedores"].get(pk=self.prov.pk)
+        self.assertEqual(prov.n, 1)
+        self.assertEqual(prov.total, D("300.00"))

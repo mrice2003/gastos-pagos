@@ -26,7 +26,6 @@ class Proveedor(models.Model):
 class CuentaBancaria(models.Model):
     class Moneda(models.TextChoices):
         MXN = "MXN", "Peso mexicano"
-        USD = "USD", "Dólar"
 
     banco = models.CharField(max_length=80)
     nombre = models.CharField("alias", max_length=100)

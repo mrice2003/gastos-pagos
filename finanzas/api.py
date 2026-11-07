@@ -3,13 +3,23 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .models import CuentaBancaria, Gasto, MovimientoCuenta, Pago, Proveedor
 from .serializers import (CuentaBancariaSerializer, GastoDetalleSerializer, GastoSerializer,
                           MovimientoCuentaSerializer, PagoDetalleSerializer, PagoSerializer,
                           ProveedorSerializer)
-from .views import resumen_datos
+from .views import parse_entero, parse_fecha, resumen_datos
+
+
+def _filtro(params, nombre, parser, error):
+    if not params.get(nombre):
+        return None
+    valor = parser(params[nombre])
+    if valor is None:
+        raise ValidationError({nombre: error})
+    return valor
 
 
 def _param(nombre, desc, tipo=OpenApiTypes.STR, enum=None):
@@ -39,12 +49,15 @@ class GastoViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(estado=p["estado"])
         if p.get("categoria"):
             qs = qs.filter(categoria=p["categoria"])
-        if p.get("proveedor"):
-            qs = qs.filter(proveedor_id=p["proveedor"])
-        if p.get("desde"):
-            qs = qs.filter(fecha__gte=p["desde"])
-        if p.get("hasta"):
-            qs = qs.filter(fecha__lte=p["hasta"])
+        proveedor = _filtro(p, "proveedor", parse_entero, "Debe ser un número entero.")
+        desde = _filtro(p, "desde", parse_fecha, "Fecha inválida; use el formato AAAA-MM-DD.")
+        hasta = _filtro(p, "hasta", parse_fecha, "Fecha inválida; use el formato AAAA-MM-DD.")
+        if proveedor is not None:
+            qs = qs.filter(proveedor_id=proveedor)
+        if desde:
+            qs = qs.filter(fecha__gte=desde)
+        if hasta:
+            qs = qs.filter(fecha__lte=hasta)
         return qs
 
 
@@ -67,10 +80,12 @@ class PagoViewSet(viewsets.ReadOnlyModelViewSet):
         p = self.request.query_params
         if p.get("estado"):
             qs = qs.filter(estado=p["estado"])
-        if p.get("gasto"):
-            qs = qs.filter(gasto_id=p["gasto"])
-        if p.get("cuenta"):
-            qs = qs.filter(cuenta_id=p["cuenta"])
+        gasto = _filtro(p, "gasto", parse_entero, "Debe ser un número entero.")
+        cuenta = _filtro(p, "cuenta", parse_entero, "Debe ser un número entero.")
+        if gasto is not None:
+            qs = qs.filter(gasto_id=gasto)
+        if cuenta is not None:
+            qs = qs.filter(cuenta_id=cuenta)
         return qs
 
 

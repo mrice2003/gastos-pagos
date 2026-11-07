@@ -96,6 +96,9 @@ def generar_pago(gasto_id, usuario, cuenta, monto=None, metodo=Pago.Metodo.TRANS
     try:
         with transaction.atomic():
             gasto = _lock_gasto(gasto_id)
+            existente = Pago.objects.filter(idempotency_key=idempotency_key).first()
+            if existente:
+                return existente, False
             if gasto.estado == GE.CANCELADO:
                 raise ReglaNegocioError("No se pueden generar pagos para un gasto cancelado.")
             if gasto.estado not in (GE.APROBADO, GE.PAGADO_PARCIAL):

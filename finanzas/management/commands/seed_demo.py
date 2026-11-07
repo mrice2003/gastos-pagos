@@ -53,12 +53,9 @@ DESTINO = ["PAGADO", "PAGADO", "PAGADO", "PARCIAL", "PAGADO", "PAGADO", "PAGO_AP
 class Command(BaseCommand):
     help = "Carga datos de demostración si no existen gastos."
 
-    def add_arguments(self, parser):
-        parser.add_argument("--force", action="store_true", help="Cargar aunque ya existan datos")
-
     @transaction.atomic
     def handle(self, *args, **opts):
-        if Gasto.objects.exists() and not opts["force"]:
+        if Gasto.objects.exists():
             self.stdout.write("Ya existen datos; se omite la carga de demostración.")
             return
         random.seed(42)
@@ -80,7 +77,7 @@ class Command(BaseCommand):
             cuentas.append(c)
         # Fecha del saldo inicial: hace 6 meses
         hoy = timezone.now()
-        MovimientoCuenta.objects.filter(descripcion="Saldo inicial").update(fecha=hoy - timedelta(days=185))
+        MovimientoCuenta.objects.filter(cuenta__in=cuentas, descripcion="Saldo inicial").update(fecha=hoy - timedelta(days=185))
 
         for i, ((concepto, cat, prov, monto), destino) in enumerate(zip(GASTOS, DESTINO)):
             dias = 175 - i * 9

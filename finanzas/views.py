@@ -4,10 +4,11 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from . import services
@@ -19,6 +20,20 @@ from .services import ReglaNegocioError
 
 def _paginar(request, qs, por_pagina=15):
     return Paginator(qs, por_pagina).get_page(request.GET.get("page"))
+
+
+def parse_entero(valor):
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_fecha(valor):
+    try:
+        return parse_date(valor or "")
+    except ValueError:
+        return None
 
 
 def _f(valor):
@@ -104,12 +119,13 @@ def gasto_list(request):
         qs = qs.filter(estado=f["estado"])
     if f["categoria"]:
         qs = qs.filter(categoria=f["categoria"])
-    if f["proveedor"]:
-        qs = qs.filter(proveedor_id=f["proveedor"])
-    if f["desde"]:
-        qs = qs.filter(fecha__gte=f["desde"])
-    if f["hasta"]:
-        qs = qs.filter(fecha__lte=f["hasta"])
+    proveedor, desde, hasta = parse_entero(f["proveedor"]), parse_fecha(f["desde"]), parse_fecha(f["hasta"])
+    if proveedor is not None:
+        qs = qs.filter(proveedor_id=proveedor)
+    if desde:
+        qs = qs.filter(fecha__gte=desde)
+    if hasta:
+        qs = qs.filter(fecha__lte=hasta)
     if f["q"]:
         qs = qs.filter(concepto__icontains=f["q"]) | qs.filter(folio__icontains=f["q"])
     total = qs.aggregate(t=Sum("monto"))["t"] or 0
@@ -215,8 +231,9 @@ def pago_list(request):
     f = {k: request.GET.get(k, "") for k in ("estado", "cuenta")}
     if f["estado"]:
         qs = qs.filter(estado=f["estado"])
-    if f["cuenta"]:
-        qs = qs.filter(cuenta_id=f["cuenta"])
+    cuenta = parse_entero(f["cuenta"])
+    if cuenta is not None:
+        qs = qs.filter(cuenta_id=cuenta)
     total = qs.aggregate(t=Sum("monto"))["t"] or 0
     return render(request, "finanzas/pago_list.html", {
         "page": _paginar(request, qs), "f": f, "total": total,
@@ -330,7 +347,9 @@ def cuenta_abonar(request, pk):
 
 @login_required
 def proveedor_list(request):
-    qs = Proveedor.objects.annotate(n=Count("gastos"), total=Sum("gastos__monto"))
+    qs = Proveedor.objects.annotate(
+        n=Count("gastos", filter=~Q(gastos__estado=Gasto.Estado.CANCELADO)),
+        total=Sum("gastos__monto", filter=~Q(gastos__estado=Gasto.Estado.CANCELADO)))
     return render(request, "finanzas/proveedor_list.html", {"proveedores": qs})
 
 

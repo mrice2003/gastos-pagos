@@ -172,7 +172,7 @@ Notación: `PK` llave primaria · `FK` llave foránea · `UK` valor único · `|
 | id | int PK | Identificador |
 | banco, nombre | varchar | Banco y alias |
 | numero | varchar(20) UK | Número de cuenta o CLABE |
-| moneda | varchar(3) | MXN, USD |
+| moneda | varchar(3) | MXN (única moneda admitida) |
 | saldo_inicial | decimal(14,2) | Saldo con el que se dio de alta |
 | saldo | decimal(14,2) | Saldo actual, `CHECK >= 0` |
 | activa | bool | Sólo cuentas activas pueden pagar |
