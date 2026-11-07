@@ -462,6 +462,7 @@ Devuelve los indicadores y los datos de los gráficos del tablero (montos como n
 | Código | Cuándo ocurre | Cuerpo de ejemplo |
 |------|-------|-----------|
 | 200 OK | Consulta exitosa | Datos solicitados |
+| 400 Bad Request | Filtro con valor inválido (ID no numérico o fecha que no es `YYYY-MM-DD`) | `{"desde": ["Fecha inválida; use el formato AAAA-MM-DD."]}` |
 | 401 Unauthorized | Sin credenciales o credenciales inválidas | `{"detail": "Las credenciales de autenticación no se proveyeron."}` |
 | 404 Not Found | El ID no existe | `{"detail": "No Gasto matches the given query."}` |
 | 405 Method Not Allowed | Se usó POST, PUT, PATCH o DELETE | `{"detail": "Método \"POST\" no permitido."}` |
