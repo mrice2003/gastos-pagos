@@ -6,7 +6,7 @@ databases:
 
 services:
   - type: web
-    name: gastos-pagos
+    name: gastos-pagos-mrice
     runtime: python
     plan: free
     buildCommand: ./build.sh
