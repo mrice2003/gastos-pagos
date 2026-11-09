@@ -47,10 +47,6 @@
       <a class="nav-link {% if 'cuenta' in u %}active{% endif %}" href="{% url 'cuenta_list' %}"><i class="bi bi-bank"></i>Cuentas bancarias</a>
       <a class="nav-link {% if 'proveedor' in u %}active{% endif %}" href="{% url 'proveedor_list' %}"><i class="bi bi-people"></i>Proveedores</a>
     </nav>
-    <div class="nav-section">API</div>
-    <nav class="nav flex-column">
-      <a class="nav-link" href="{% url 'swagger' %}" target="_blank"><i class="bi bi-braces"></i>API REST · docs<i class="bi bi-box-arrow-up-right ms-auto small"></i></a>
-    </nav>
     <div class="mt-auto user-box pt-3 d-flex align-items-center gap-2">
       <span class="avatar">{{ user.username|slice:":2" }}</span>
       <div class="flex-grow-1 min-w-0"><div class="fw-semibold small text-truncate">{{ user.username }}</div>

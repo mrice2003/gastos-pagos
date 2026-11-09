@@ -1,18 +1,17 @@
 ---
 title: "Examen de programación — Aplicación de Gastos y Pagos"
-author: "<TU NOMBRE>"
+author: "Michael Rice"
 lang: es-MX
 ---
 
 # 1. Acceso a la aplicación
 
 | Dato | Valor |
-|---|---|
-| URL de la aplicación | **https://\<TU-SERVICIO\>.onrender.com** |
-| Usuario | **\<USUARIO\>** |
-| Contraseña | **\<CONTRASEÑA\>** |
-| Documentación interactiva de la API (Swagger) | https://\<TU-SERVICIO\>.onrender.com/api/docs/ |
-| API REST (URL base) | https://\<TU-SERVICIO\>.onrender.com/api/ |
+|----------------------------|----------------------------------------------------|
+| URL de la aplicación | **<https://gastos-pagos-mrice.onrender.com>** |
+| Usuario | **evaluador** |
+| Contraseña | **Gastos2026!rgv** |
+| API REST (URL base) | <https://gastos-pagos-mrice.onrender.com/api/> |
 
 La aplicación está desplegada en Render y se usa directamente desde el navegador; no requiere instalar nada.
 
@@ -30,8 +29,8 @@ Si aparece el mensaje *"Usuario o contraseña incorrectos"*, verifique que no ha
 
 **Acceso a la API REST:** se usan las mismas credenciales.
 
-- **Desde el navegador:** en el menú lateral pulse **API REST · docs** (Swagger), luego **Authorize**, escriba usuario y contraseña, pulse **Authorize** y **Close**. Después, en cualquier endpoint, pulse **Try it out** y **Execute**.
-- **Desde una terminal:** `curl -u USUARIO:CONTRASEÑA https://<TU-SERVICIO>.onrender.com/api/gastos/`
+- **Desde el navegador:** abra la *API REST (URL base)* de la tabla anterior seguida del recurso, p. ej. `/api/gastos/`; el navegador pedirá el usuario y la contraseña. La sección 5 describe todos los endpoints.
+- **Desde una terminal:** `curl -u 'evaluador:Gastos2026!rgv' https://gastos-pagos-mrice.onrender.com/api/gastos/`
 
 ## 1.2 Lenguajes y tecnologías utilizadas
 
@@ -39,7 +38,7 @@ Si aparece el mensaje *"Usuario o contraseña incorrectos"*, verifique que no ha
 |---|---|
 | Lenguaje back-end | **Python 3.12** |
 | Framework web | **Django 5.1** |
-| API REST | **Django REST Framework** + drf-spectacular (OpenAPI 3 / Swagger) |
+| API REST | **Django REST Framework** |
 | Base de datos | **PostgreSQL** (producción), SQLite (desarrollo) — **SQL** mediante el ORM de Django |
 | Front-end | **HTML5**, **CSS3**, **JavaScript**; Bootstrap 5 (front-end pre-hecho), Chart.js (gráficos), tipografía Inter |
 | Servidor / despliegue | Gunicorn, WhiteNoise, Render (Blueprint `render.yaml`) |
@@ -204,7 +203,7 @@ Notación: `PK` llave primaria · `FK` llave foránea · `UK` valor único · `|
 
 # 4. Video de la aplicación
 
-Enlace: **\<ENLACE A GOOGLE DRIVE\>**
+Enlace: <https://drive.google.com/drive/folders/1cRnpsv6ZN8yOir3tln0HitUci9ztFsZ3>
 
 Funcionalidades mostradas en el video:
 
@@ -216,7 +215,7 @@ Funcionalidades mostradas en el video:
 6. Aprobación, cancelación y ejecución de pagos; actualización del saldo de la cuenta y del estado del gasto.
 7. Validaciones: pago de un gasto no aprobado, saldo insuficiente e intento de pago duplicado.
 8. Historial de movimientos y bitácora.
-9. API REST: Swagger y consultas con usuario y contraseña.
+9. API REST: consultas con usuario y contraseña.
 
 # 5. Documentación de la API REST
 
@@ -224,11 +223,10 @@ Funcionalidades mostradas en el video:
 
 | Concepto | Valor |
 |---|---|
-| URL base | `https://<TU-SERVICIO>.onrender.com/api/` |
+| URL base | `https://gastos-pagos-mrice.onrender.com/api/` |
 | Métodos permitidos | Sólo `GET` (API de solo lectura) |
 | Autenticación | HTTP Basic: el mismo usuario y contraseña de la aplicación |
 | Formato | JSON (UTF-8) |
-| Documentación interactiva | `/api/docs/` (Swagger UI) · esquema OpenAPI 3 en `/api/schema/` |
 | Montos | Cadenas decimales con 2 decimales, p. ej. `"48000.00"` (evita errores de redondeo) |
 | Fechas | `fecha` en formato `YYYY-MM-DD`; fechas con hora en ISO 8601 con zona horaria (`2026-06-17T22:15:49-06:00`) |
 
@@ -237,7 +235,7 @@ Funcionalidades mostradas en el video:
 Cada petición debe incluir el encabezado `Authorization: Basic <base64(usuario:contraseña)>`. Con `curl` basta la opción `-u`:
 
 ```bash
-curl -u USUARIO:CONTRASEÑA https://<TU-SERVICIO>.onrender.com/api/gastos/
+curl -u 'evaluador:Gastos2026!rgv' https://gastos-pagos-mrice.onrender.com/api/gastos/
 ```
 
 Desde el navegador, si ya se inició sesión en la aplicación, la API también acepta la sesión activa.
@@ -249,7 +247,7 @@ Los listados devuelven 20 elementos por página con esta estructura:
 ```json
 {
   "count": 20,
-  "next": "https://<TU-SERVICIO>.onrender.com/api/gastos/?page=2",
+  "next": "https://gastos-pagos-mrice.onrender.com/api/gastos/?page=2",
   "previous": null,
   "results": [ ... ]
 }
@@ -290,7 +288,7 @@ Lista los gastos, del más reciente al más antiguo.
 | `page` | entero | Número de página |
 
 ```bash
-curl -u USUARIO:CONTRASEÑA "https://<TU-SERVICIO>.onrender.com/api/gastos/?estado=PAGADO_PARCIAL"
+curl -u 'evaluador:Gastos2026!rgv' "https://gastos-pagos-mrice.onrender.com/api/gastos/?estado=PAGADO_PARCIAL"
 ```
 
 Cada elemento de `results` tiene los mismos campos que el detalle, sin `pagos` ni `bitacora`.
@@ -353,7 +351,7 @@ Detalle de un gasto con sus pagos y su historial de estados. Respuesta `200 OK`:
 | `page` | entero | Número de página |
 
 ```bash
-curl -u USUARIO:CONTRASEÑA "https://<TU-SERVICIO>.onrender.com/api/pagos/?gasto=4"
+curl -u 'evaluador:Gastos2026!rgv' "https://gastos-pagos-mrice.onrender.com/api/pagos/?gasto=4"
 ```
 
 ### GET `/api/pagos/{id}/`
