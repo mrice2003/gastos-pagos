@@ -26,4 +26,4 @@ python manage.py test finanzas
 ## Documentación
 - `docs/documentacion.odt` / `.docx` — entregable editable (exportar a PDF desde LibreOffice).
 - `docs/diagramas/*.mmd` — diagramas Mermaid editables (+ `.png`/`.svg`).
-- API: `/api/docs/` (Swagger) y `/api/`.
+- API REST (GET): `/api/`. Su documentación está en el PDF (sección 5).
